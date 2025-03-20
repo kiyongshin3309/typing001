@@ -4,53 +4,66 @@ import hgtk
 
 app = Flask(__name__, static_folder="static")
 
+# 연습할 단어 목록
 WORD_LIST = [
-        "네가 희망이 있으므로 안전할 것이며 두루 살펴보고 평안히 쉬리라 욥기 11장 18절",
+    "네가 희망이 있으므로 안전할 것이며 두루 살펴보고 평안히 쉬리라 욥기 11장 18절",
     "You will be secure, because there is hope",
     "you will look about you and take your rest in safety Job 11:18",
     "여호와의 말씀이니라 너희를 향한 나의 생각을 내가 아나니 평안이요",
     "재앙이 아니니라 너희에게 미래와 희망을 주는 것이니라 예레미야 29장 11절",
-     "For I know the plans I have for you, 'declares the LORD'",
-     "plans to prosper you and not to harm you",
+    "For I know the plans I have for you, 'declares the LORD'",
+    "plans to prosper you and not to harm you",
     "plans to give you hope and a future. (Jeremiah 29:11)"
 ]
 
+# 전역 변수 초기화
 current_count = 0
 results = []
 start_time = 0
 
 @app.route("/")
 def index():
+    """ 메인 페이지 렌더링 """
     global current_count, results, start_time
     current_count = 0
     results = []
     start_time = time.time()
     return render_template("index.html", word=WORD_LIST[current_count])
 
-@app.route("/check", methods=["POST"])
+@app.route("/check", methods=["GET", "POST"])  # ✅ GET과 POST 요청 허용
 def check():
+    """ 사용자가 입력한 문장을 비교하고 결과 반환 """
     global current_count, results, start_time
 
+    # 모든 문장을 완료했을 경우 종료 응답
     if current_count >= len(WORD_LIST):
         return jsonify({"finished": True})
 
-    user_input = request.json.get("user_input", "")
+    # 사용자가 입력한 데이터 가져오기
+    user_input = request.json.get("user_input", "") if request.is_json else ""
+
+    # 시간 측정
     end_time = time.time() - start_time
 
+    # 한글 분해 및 비교 (hgtk 사용)
     src = hgtk.text.decompose(WORD_LIST[current_count]).replace("ᴥ", "")
     tar = hgtk.text.decompose(user_input).replace("ᴥ", "")
 
+    # 정확도 및 속도 계산
     correct = sum(1 for c1, c2 in zip(src, tar) if c1 == c2)
     src_len = len(src)
-    accuracy = correct / src_len * 100
-    typo_rate = (src_len - correct) / src_len * 100
-    speed = float(correct / end_time) * 60 if end_time > 0 else 0  # 0초 방지
+    accuracy = (correct / src_len) * 100 if src_len > 0 else 0
+    typo_rate = ((src_len - correct) / src_len) * 100 if src_len > 0 else 0
+    speed = (correct / end_time) * 60 if end_time > 0 else 0  # 0초 방지
 
+    # 결과 저장
     results.append((speed, accuracy, typo_rate))
     current_count += 1
 
+    # 결과 메시지 생성
     result_text = f"속도: {speed:.2f} 정확도: {accuracy:.2f}% 오타율: {typo_rate:.2f}%"
 
+    # 다음 문장 반환 또는 연습 종료
     if current_count < len(WORD_LIST):
         next_word = WORD_LIST[current_count]
     else:
@@ -61,8 +74,9 @@ def check():
         avg_result = f"평균 속도: {avg_speed:.2f}, 정확도: {avg_accuracy:.2f}%, 오타율: {avg_typo_rate:.2f}%"
         return jsonify({"result": result_text, "word": next_word, "finished": True, "average_result": avg_result})
 
-    start_time = time.time()
+    start_time = time.time()  # 새로운 문장 시작 시 시간 초기화
     return jsonify({"result": result_text, "word": next_word, "finished": False})
 
+# Cloudtype 환경에서 실행될 수 있도록 설정
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8080)
+    app.run(debug=True, host="0.0.0.0", port=8000)  # ✅ Cloudtype 배포 고려
