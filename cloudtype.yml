@@ -1,0 +1,10 @@
+app: typing-practice
+services:
+  - name: web
+    env: python
+    build:
+      commands:
+        - pip install -r requirements.txt
+    run:
+      command: gunicorn -w 4 -b 0.0.0.0:5001 application:app
+      port: 8000

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>은동교 타자연습 사이트</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        let finished = false;
+
+        async function checkInput() {
+            if (finished) return;
+            const userInput = document.getElementById("user_input").value;
+            const response = await fetch("/check", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_input: userInput }),
+            });
+            const data = await response.json();
+            document.getElementById("result").innerText = data.result;
+            document.getElementById("word").innerText = data.word;
+            document.getElementById("user_input").value = "";
+
+            if (data.finished) {
+                finished = true;
+                document.getElementById("average_result").innerText = data.average_result;
+                document.getElementById("restart_button").style.display = "block";  // 다시 하기 버튼 표시
+            }
+        }
+
+        function restartPractice() {
+            location.reload();  // 페이지 새로고침하여 연습 재시작
+        }
+
+        // 복사, 붙여넣기 방지 기능
+        document.addEventListener("DOMContentLoaded", function() {
+            let inputField = document.getElementById("user_input");
+
+            inputField.addEventListener("copy", (e) => e.preventDefault());
+            inputField.addEventListener("paste", (e) => e.preventDefault());
+            inputField.addEventListener("cut", (e) => e.preventDefault());
+            inputField.setAttribute("autocomplete", "off");
+            inputField.setAttribute("spellcheck", "false");
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>성경암송 말씀으로 타자연습 해봅시다</h1>
+        <p id="word">{{ word }}</p>
+        <input type="text" id="user_input" onkeypress="if(event.key === 'Enter') checkInput()" />
+        <p id="result"></p>
+        <p id="average_result"></p>
+        <button id="restart_button" class="restart-button" style="display: none;" onclick="restartPractice()">다시 하기</button>
+    </div>
+</body>
+</html>

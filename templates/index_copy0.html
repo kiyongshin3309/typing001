@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>성경 타자 연습</title>
+    <script>
+        let finished = false;
+
+        async function checkInput() {
+            if (finished) return;
+            const userInput = document.getElementById("user_input").value;
+            const response = await fetch("/check", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_input: userInput }),
+            });
+            const data = await response.json();
+            document.getElementById("result").innerText = data.result;
+            document.getElementById("word").innerText = data.word;
+            document.getElementById("user_input").value = "";
+
+            if (data.finished) {
+                finished = true;
+                document.getElementById("average_result").innerText = data.average_result;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>성경 타자 연습</h1>
+    <p id="word">{{ word }}</p>
+    <input type="text" id="user_input" onkeypress="if(event.key === 'Enter') checkInput()" />
+    <p id="result"></p>
+    <p id="average_result"></p>
+</body>
+</html>
