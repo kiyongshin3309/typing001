@@ -16,35 +16,34 @@ start_time = 0
 
 @app.route("/")
 def index():
+    """ 메인 페이지 렌더링 """
     global current_count, results, start_time
     current_count = 0
     results = []
-    start_time = time.time()
+    start_time = time.time()  # 시작 시간 초기화
     return render_template("index.html", word=WORD_LIST[current_count])
 
 @app.route("/check", methods=["GET", "POST"])
 def check():
+    """ 사용자가 입력한 문장을 비교하고 결과 반환 """
     global current_count, results, start_time
 
     if current_count >= len(WORD_LIST):
         return jsonify({"finished": True})
 
-    # 📌 디버깅: 받은 JSON 데이터 출력
-    print("🔍 요청 데이터:", request.json)
-
-    # JSON 데이터가 없는 경우 예외 처리
     data = request.get_json()
     if not data or "user_input" not in data:
         return jsonify({"error": "user_input 데이터가 전달되지 않았습니다."}), 400
 
     user_input = data.get("user_input", "").strip()
-    print(f"✅ 받은 입력값: {user_input}")  # 로그 확인
 
-    # 입력값이 빈 경우 처리
     if not user_input:
         return jsonify({"error": "입력값이 비어 있습니다."}), 400
 
+    # 시간 측정
     end_time = time.time() - start_time
+    if end_time < 0.01:  # ✅ end_time이 너무 작으면 최소값 설정
+        end_time = 0.01
 
     # 한글 비교
     src = hgtk.text.decompose(WORD_LIST[current_count]).replace("ᴥ", "")
@@ -54,13 +53,14 @@ def check():
     src_len = len(src)
     accuracy = (correct / src_len) * 100 if src_len > 0 else 0
     typo_rate = ((src_len - correct) / src_len) * 100 if src_len > 0 else 0
-    speed = (correct / end_time) * 60 if end_time > 0 else 0  # 0초 방지
+    speed = (correct / end_time) * 60 if end_time > 0 else 0  # ✅ 최소 0.01초 보장
 
     results.append((speed, accuracy, typo_rate))
     current_count += 1
 
     result_text = f"속도: {speed:.2f} 정확도: {accuracy:.2f}% 오타율: {typo_rate:.2f}%"
 
+    # 다음 문장 반환 또는 연습 종료
     if current_count < len(WORD_LIST):
         next_word = WORD_LIST[current_count]
     else:
@@ -71,7 +71,7 @@ def check():
         avg_result = f"평균 속도: {avg_speed:.2f}, 정확도: {avg_accuracy:.2f}%, 오타율: {avg_typo_rate:.2f}%"
         return jsonify({"result": result_text, "word": next_word, "finished": True, "average_result": avg_result})
 
-    start_time = time.time()
+    start_time = time.time()  # ✅ 새로운 문장 시작 시 start_time 다시 설정
     return jsonify({"result": result_text, "word": next_word, "finished": False})
 
 if __name__ == "__main__":
